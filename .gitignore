@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+domains.db
+domains.db-wal
+domains.db-shm
+.vercel

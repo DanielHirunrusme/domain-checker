@@ -1,0 +1,674 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>.com Availability Finder</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0f1118;
+        --panel: #171a24;
+        --panel-2: #1f2431;
+        --text: #e6ebff;
+        --muted: #8e98bf;
+        --line: #2a3144;
+        --green: #13a86c;
+        --taken: #667085;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: radial-gradient(circle at top, #1b2030 0%, var(--bg) 45%);
+        color: var(--text);
+        font-family: "Space Grotesk", system-ui, sans-serif;
+      }
+      .app {
+        max-width: 1160px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      .title-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: baseline;
+      }
+      h1 {
+        margin: 0;
+        font-size: 30px;
+        letter-spacing: 0.4px;
+      }
+      .note {
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .panel {
+        margin-top: 16px;
+        background: color-mix(in oklab, var(--panel) 90%, black);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 16px;
+      }
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(120px, 1fr));
+        gap: 10px;
+      }
+      .stat {
+        background: var(--panel-2);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 10px;
+      }
+      .stat small {
+        color: var(--muted);
+        display: block;
+      }
+      .stat strong {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 22px;
+      }
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 14px;
+        align-items: center;
+      }
+      .search-wrap {
+        display: none;
+      }
+      .config-grid {
+        margin-top: 12px;
+        display: grid;
+        grid-template-columns: repeat(6, minmax(120px, 1fr));
+        gap: 10px;
+      }
+      .cfg {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .cfg label {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .cfg input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        margin: 0;
+      }
+      .cfg.inline {
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+        margin-top: 20px;
+      }
+      .pill-group {
+        display: inline-flex;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        overflow: hidden;
+      }
+      .pill {
+        border: 0;
+        color: var(--text);
+        background: transparent;
+        padding: 8px 13px;
+        cursor: pointer;
+      }
+      .pill.active {
+        background: #2a344c;
+      }
+      input,
+      select,
+      button {
+        background: #111522;
+        color: var(--text);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 8px 10px;
+        font-size: 14px;
+      }
+      button.action {
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .running {
+        color: #80e2b6;
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 12px;
+      }
+      .progress-wrap {
+        margin-top: 12px;
+      }
+      .progress {
+        height: 10px;
+        border-radius: 999px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        background: #0d1019;
+      }
+      .progress > div {
+        width: 0%;
+        height: 100%;
+        background: linear-gradient(90deg, #4355f1, #6ac9ff);
+        transition: width 220ms ease;
+      }
+      .list-shell {
+        margin-top: 16px;
+        height: 70vh;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        overflow: auto;
+        background: #0f1422;
+        position: relative;
+      }
+      .viewport {
+        position: relative;
+        width: 100%;
+      }
+      .row {
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 14px;
+      }
+      .row.available {
+        background: var(--green);
+        color: #ffffff;
+      }
+      .row.available a {
+        color: #ffffff;
+      }
+      .row.registered {
+        color: var(--taken);
+      }
+      .row.unchecked {
+        color: var(--muted);
+      }
+      .method {
+        font-size: 11px;
+        opacity: 0.85;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+      }
+      .row-meta {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .score {
+        font-size: 11px;
+        opacity: 0.75;
+        font-family: "IBM Plex Mono", monospace;
+      }
+      .empty {
+        padding: 16px;
+        color: var(--muted);
+      }
+      .recent-panel {
+        margin-top: 16px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        overflow: hidden;
+        background: #111725;
+      }
+      .recent-header {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .recent-title {
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+      }
+      .recent-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .recent-controls label {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 13px;
+      }
+      th,
+      td {
+        padding: 9px 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        text-align: left;
+      }
+      th {
+        color: var(--muted);
+        font-weight: 500;
+      }
+      tr:last-child td {
+        border-bottom: 0;
+      }
+      .cell-available {
+        color: #70efb6;
+      }
+      .cell-registered {
+        color: #b6bfda;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <div class="title-row">
+        <h1>Dictionary .com Finder</h1>
+        <div class="note">
+          available = currently unregistered; premium/reserved names can still be unbuyable or expensive.
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="stats">
+          <div class="stat"><small>Available</small><strong id="stat-available">0</strong></div>
+          <div class="stat"><small>Taken</small><strong id="stat-registered">0</strong></div>
+          <div class="stat"><small>Unchecked</small><strong id="stat-unchecked">0</strong></div>
+          <div class="stat"><small>Total</small><strong id="stat-total">0</strong></div>
+        </div>
+
+        <div class="controls">
+          <div class="pill-group" id="filter-group">
+            <button class="pill" data-filter="all">All</button>
+            <button class="pill" data-filter="available">Available</button>
+            <button class="pill active" data-filter="unavailable">Taken</button>
+            <button class="pill" data-filter="unchecked">Unchecked</button>
+          </div>
+
+          <div class="search-wrap">
+            <input id="search" placeholder="Search substring..." />
+          </div>
+          <select id="wordlist">
+            <option value="common">Common list</option>
+            <option value="full" selected>Full dictionary</option>
+          </select>
+          <button class="action" id="start-stop">Start check</button>
+          <span class="running" id="running-state">idle</span>
+        </div>
+        <div class="config-grid">
+          <div class="cfg">
+            <label for="min-len">Min length</label>
+            <input id="min-len" type="number" min="2" max="63" value="2" />
+          </div>
+          <div class="cfg">
+            <label for="max-len">Max length</label>
+            <input id="max-len" type="number" min="2" max="63" value="63" />
+          </div>
+          <div class="cfg">
+            <label for="dns-concurrency">DNS concurrency</label>
+            <input id="dns-concurrency" type="number" min="1" max="1000" value="150" />
+          </div>
+          <div class="cfg">
+            <label for="rdap-concurrency">RDAP concurrency</label>
+            <input id="rdap-concurrency" type="number" min="1" max="100" value="8" />
+          </div>
+          <div class="cfg">
+            <label for="rdap-rate">RDAP req/s</label>
+            <input id="rdap-rate" type="number" min="1" max="50" step="0.5" value="8" />
+          </div>
+          <div class="cfg inline">
+            <input id="do-rdap" type="checkbox" checked />
+            <label for="do-rdap">Enable RDAP verify</label>
+          </div>
+          <div class="cfg">
+            <label for="min-zipf">Min Zipf (word freq)</label>
+            <input id="min-zipf" type="number" min="0" max="8" step="0.1" value="3.5" />
+          </div>
+          <div class="cfg inline">
+            <input id="show-all" type="checkbox" />
+            <label for="show-all">Show all words</label>
+          </div>
+        </div>
+
+        <div class="progress-wrap">
+          <div class="progress"><div id="progress-bar"></div></div>
+        </div>
+      </div>
+
+      <div id="list" class="list-shell">
+        <div class="viewport" id="viewport"></div>
+      </div>
+      <div id="empty" class="empty" style="display: none">No words match this filter.</div>
+
+      <div class="recent-panel">
+        <div class="recent-header">
+          <div class="recent-title">Live output (recent checked dictionary .com domains)</div>
+          <div class="recent-controls">
+            <label for="live-mode">Show</label>
+            <select id="live-mode">
+              <option value="registered" selected>Registered only</option>
+              <option value="checked">Registered + Available</option>
+            </select>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Domain</th>
+              <th>Status</th>
+              <th>Zipf</th>
+              <th>Method</th>
+              <th>Checked At (UTC)</th>
+            </tr>
+          </thead>
+          <tbody id="recent-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <script>
+      const rowHeight = 36;
+      const pageSize = 500;
+      const listEl = document.getElementById("list");
+      const viewportEl = document.getElementById("viewport");
+      const emptyEl = document.getElementById("empty");
+      const runningStateEl = document.getElementById("running-state");
+      const startStopBtn = document.getElementById("start-stop");
+      const recentBodyEl = document.getElementById("recent-body");
+      const liveModeEl = document.getElementById("live-mode");
+
+      const appState = {
+        filter: "unavailable",
+        q: "",
+        total: 0,
+        pages: new Map(),
+        loadingPages: new Set(),
+        running: false,
+        minZipf: 3.5,
+        showAll: false,
+      };
+
+      function formatNumber(v) {
+        return Number(v || 0).toLocaleString();
+      }
+
+      function formatZipf(v) {
+        if (v === null || v === undefined || v === "") return "-";
+        return Number(v).toFixed(2);
+      }
+
+      function freqParams() {
+        const params = { show_all: String(appState.showAll) };
+        if (!appState.showAll) params.min_zipf = String(appState.minZipf);
+        return params;
+      }
+
+      function updateStats(stats) {
+        document.getElementById("stat-available").textContent = formatNumber(stats.available);
+        document.getElementById("stat-registered").textContent = formatNumber(stats.registered);
+        document.getElementById("stat-unchecked").textContent = formatNumber(stats.unchecked);
+        document.getElementById("stat-total").textContent = formatNumber(stats.total);
+        const checked = Math.max(0, stats.total - stats.unchecked);
+        const pct = stats.total ? Math.round((checked / stats.total) * 100) : 0;
+        document.getElementById("progress-bar").style.width = `${pct}%`;
+        appState.running = Boolean(stats.running);
+        startStopBtn.textContent = appState.running ? "Stop check" : "Start check";
+        runningStateEl.textContent = appState.running
+          ? `${stats.stage} @ ${stats.rate}/s`
+          : stats.stage || "idle";
+      }
+
+      async function fetchStats() {
+        const res = await fetch("/api/stats");
+        const stats = await res.json();
+        updateStats(stats);
+      }
+
+      async function fetchPage(pageIdx) {
+        if (appState.loadingPages.has(pageIdx) || appState.pages.has(pageIdx)) return;
+        appState.loadingPages.add(pageIdx);
+        const offset = pageIdx * pageSize;
+        const params = new URLSearchParams({
+          filter: appState.filter,
+          q: appState.q,
+          offset: String(offset),
+          limit: String(pageSize),
+          ...freqParams(),
+        });
+        try {
+          const res = await fetch(`/api/words?${params.toString()}`);
+          const data = await res.json();
+          appState.total = data.total;
+          appState.pages.set(pageIdx, data.items);
+        } finally {
+          appState.loadingPages.delete(pageIdx);
+        }
+      }
+
+      async function fetchRecent() {
+        const liveMode = liveModeEl.value || "registered";
+        const params = new URLSearchParams({
+          status: liveMode,
+          limit: "80",
+          ...freqParams(),
+        });
+        const res = await fetch(`/api/recent?${params.toString()}`);
+        const data = await res.json();
+        const rows = data.items || [];
+        if (!rows.length) {
+          recentBodyEl.innerHTML = `<tr><td colspan="5" class="cell-registered">No checked rows yet.</td></tr>`;
+          return;
+        }
+        recentBodyEl.innerHTML = rows
+          .map((row) => {
+            const statusClass = row.status === "available" ? "cell-available" : "cell-registered";
+            const checkedAt = row.checked_at || "-";
+            return `<tr>
+                <td>${row.word}.com</td>
+                <td class="${statusClass}">${row.status}</td>
+                <td>${formatZipf(row.zipf)}</td>
+                <td>${row.method || "-"}</td>
+                <td>${checkedAt}</td>
+              </tr>`;
+          })
+          .join("");
+      }
+      liveModeEl.addEventListener("change", fetchRecent);
+
+      function getRow(index) {
+        const pageIdx = Math.floor(index / pageSize);
+        const within = index % pageSize;
+        const page = appState.pages.get(pageIdx);
+        return page ? page[within] : null;
+      }
+
+      async function renderVirtual() {
+        const top = listEl.scrollTop;
+        const viewportHeight = listEl.clientHeight;
+        const start = Math.max(0, Math.floor(top / rowHeight) - 20);
+        const end = Math.min(appState.total, Math.ceil((top + viewportHeight) / rowHeight) + 30);
+        const firstPage = Math.floor(start / pageSize);
+        const lastPage = Math.floor(Math.max(start, end - 1) / pageSize);
+
+        for (let p = firstPage; p <= lastPage; p += 1) {
+          fetchPage(p);
+        }
+
+        viewportEl.style.height = `${appState.total * rowHeight}px`;
+        viewportEl.innerHTML = "";
+        if (!appState.total) {
+          emptyEl.style.display = "block";
+          return;
+        }
+        emptyEl.style.display = "none";
+        const frag = document.createDocumentFragment();
+        for (let i = start; i < end; i += 1) {
+          const row = getRow(i);
+          if (!row) continue;
+          const node = document.createElement("div");
+          node.className = `row ${row.status === "registered" ? "registered" : row.status}`;
+          node.style.top = `${i * rowHeight}px`;
+          const label = `${row.word}.com`;
+          const method = row.method || "-";
+          const score = formatZipf(row.zipf);
+          const meta = `<span class="row-meta"><span class="score">z=${score}</span><span class="method">${method}</span></span>`;
+          if (row.status === "available") {
+            node.innerHTML = `<a href="https://www.namecheap.com/domains/registration/results/?domain=${encodeURIComponent(label)}" target="_blank" rel="noreferrer">${label}</a>${meta}`;
+          } else {
+            node.innerHTML = `<span>${label}</span>${meta}`;
+          }
+          frag.appendChild(node);
+        }
+        viewportEl.appendChild(frag);
+      }
+
+      function clearDataAndReload() {
+        appState.pages.clear();
+        appState.loadingPages.clear();
+        appState.total = 0;
+        listEl.scrollTop = 0;
+        fetchPage(0).then(renderVirtual);
+      }
+
+      function getVisiblePageRange() {
+        const top = listEl.scrollTop;
+        const viewportHeight = listEl.clientHeight;
+        const start = Math.max(0, Math.floor(top / rowHeight) - 20);
+        const end = Math.min(appState.total, Math.ceil((top + viewportHeight) / rowHeight) + 30);
+        const firstPage = Math.max(0, Math.floor(start / pageSize));
+        const lastPage = Math.max(firstPage, Math.floor(Math.max(start, end - 1) / pageSize));
+        return { firstPage, lastPage };
+      }
+
+      async function refreshVisiblePages() {
+        const { firstPage, lastPage } = getVisiblePageRange();
+        const jobs = [];
+        for (let p = firstPage; p <= lastPage; p += 1) {
+          appState.pages.delete(p);
+          jobs.push(fetchPage(p));
+        }
+        await Promise.all(jobs);
+        await renderVirtual();
+      }
+
+      let searchTimer = null;
+      document.getElementById("search").addEventListener("input", (e) => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+          appState.q = e.target.value.trim().toLowerCase();
+          clearDataAndReload();
+        }, 300);
+      });
+
+      const minZipfEl = document.getElementById("min-zipf");
+      const showAllEl = document.getElementById("show-all");
+
+      function syncFreqControls() {
+        minZipfEl.disabled = showAllEl.checked;
+      }
+
+      let zipfTimer = null;
+      minZipfEl.addEventListener("input", () => {
+        clearTimeout(zipfTimer);
+        zipfTimer = setTimeout(() => {
+          const parsed = Number(minZipfEl.value);
+          appState.minZipf = Number.isFinite(parsed) ? parsed : 3.5;
+          clearDataAndReload();
+          fetchRecent();
+        }, 300);
+      });
+
+      showAllEl.addEventListener("change", () => {
+        appState.showAll = showAllEl.checked;
+        syncFreqControls();
+        clearDataAndReload();
+        fetchRecent();
+      });
+      syncFreqControls();
+
+      document.getElementById("filter-group").addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-filter]");
+        if (!btn) return;
+        appState.filter = btn.dataset.filter;
+        document.querySelectorAll(".pill").forEach((x) => x.classList.remove("active"));
+        btn.classList.add("active");
+        clearDataAndReload();
+      });
+
+      startStopBtn.addEventListener("click", async () => {
+        if (appState.running) {
+          await fetch("/api/stop", { method: "POST" });
+        } else {
+          const wordlist = document.getElementById("wordlist").value;
+          const minLen = Number(document.getElementById("min-len").value || 2);
+          const maxLen = Number(document.getElementById("max-len").value || 63);
+          const dnsConcurrency = Number(document.getElementById("dns-concurrency").value || 150);
+          const rdapConcurrency = Number(document.getElementById("rdap-concurrency").value || 8);
+          const rdapRate = Number(document.getElementById("rdap-rate").value || 8);
+          const doRdap = Boolean(document.getElementById("do-rdap").checked);
+          appState.showAll = showAllEl.checked;
+          appState.minZipf = Number(minZipfEl.value || 3.5);
+          await fetch("/api/start", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              wordlist,
+              min_len: Math.max(2, Math.min(63, minLen)),
+              max_len: Math.max(2, Math.min(63, maxLen)),
+              dns_concurrency: Math.max(1, dnsConcurrency),
+              rdap_concurrency: Math.max(1, rdapConcurrency),
+              rdap_rate: Math.max(1, rdapRate),
+              no_rdap: !doRdap,
+              show_all: appState.showAll,
+              min_zipf: appState.minZipf,
+            }),
+          });
+          clearDataAndReload();
+        }
+        fetchStats();
+      });
+
+      let rafPending = false;
+      listEl.addEventListener("scroll", () => {
+        if (rafPending) return;
+        rafPending = true;
+        requestAnimationFrame(() => {
+          rafPending = false;
+          renderVirtual();
+        });
+      });
+
+      async function tick() {
+        await fetchStats();
+        await fetchRecent();
+        if (appState.running) await refreshVisiblePages();
+        else renderVirtual();
+      }
+
+      fetchStats().then(() => {
+        fetchPage(0).then(renderVirtual);
+        fetchRecent();
+      });
+      setInterval(tick, 1500);
+    </script>
+  </body>
+  </html>
